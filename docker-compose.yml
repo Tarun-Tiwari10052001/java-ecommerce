@@ -1,0 +1,38 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ecommjava
+      MYSQL_USER: ecomapp
+      MYSQL_PASSWORD: ecomapp_pw
+      MYSQL_ROOT_PASSWORD: root_pw
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Official MySQL image auto-runs anything here, once, on first boot -
+      # this is what seeds categories/products/admin+lisa users.
+      - ./basedata.sql:/docker-entrypoint-initdb.d/basedata.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_pw"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/ecommjava
+      DB_USERNAME: ecomapp
+      DB_PASSWORD: ecomapp_pw
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
